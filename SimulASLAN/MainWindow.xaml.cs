@@ -506,8 +506,10 @@ namespace WpfApp1
 <head>
     <meta http-equiv='X-UA-Compatible' content='IE=Edge'/>
     <style>html,body,#map{{height:100%;margin:0;padding:0;background:#111;color:#fff;}}</style>
-    <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
-    <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+    <!-- Leaflet 1.9+ drops Internet Explorer support. The WebBrowser control runs on the installed IE engine, so
+         using a legacy-compatible release avoids script errors when clicking the map. -->
+    <link rel='stylesheet' href='https://unpkg.com/leaflet@1.7.1/dist/leaflet.css'/>
+    <script src='https://unpkg.com/leaflet@1.7.1/dist/leaflet.js'></script>
 </head>
 <body>
 <div id='map'></div>
