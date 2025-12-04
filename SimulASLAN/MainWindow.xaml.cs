@@ -510,7 +510,11 @@ namespace WpfApp1
     var map=L.map('map').setView([{lat},{lon}], 14);
     L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png',{{maxZoom:19}}).addTo(map);
     var markers=[]; var line=null;
-    function clearWaypoints(){{markers.forEach(m=>map.removeLayer(m));markers=[]; if(line){{map.removeLayer(line); line=null;}}}}
+    function clearWaypoints(){{
+        markers.forEach(function(m){{ map.removeLayer(m); }});
+        markers=[];
+        if(line){{ map.removeLayer(line); line=null; }}
+    }}
     function setWaypoints(json){{
         clearWaypoints();
         if(!json) return;
