@@ -13,6 +13,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
+using System.Reflection;
 
 namespace WpfApp1
 {
@@ -46,6 +47,7 @@ namespace WpfApp1
         {
             InitializeComponent();
 
+            SuppressWebBrowserScriptErrors();
             MissionMap.ObjectForScripting = this;
             _centerLat = lat;
             _centerLon = lon;
@@ -61,6 +63,22 @@ namespace WpfApp1
             PopulateSavedMissions();
             MissionMap.NavigateToString(BuildMapHtml());
             InitializeSimulatorAsync();
+        }
+
+        private void SuppressWebBrowserScriptErrors()
+        {
+            try
+            {
+                var ax = MissionMap.GetType().InvokeMember("ActiveXInstance", BindingFlags.GetProperty | BindingFlags.Instance | BindingFlags.NonPublic, null, MissionMap, new object[0]);
+                if (ax != null)
+                {
+                    ax.GetType().InvokeMember("Silent", BindingFlags.SetProperty, null, ax, new object[] { true });
+                }
+            }
+            catch
+            {
+                // Best effort: if we cannot reach the underlying ActiveX control, keep default behavior.
+            }
         }
 
         public MainWindow() : this(41.145253, 29.3678, 4, "EN") { }
@@ -519,7 +537,7 @@ namespace WpfApp1
     var markers=[]; var line=null;
     map.on('click', function(e){{
         if(window.external && window.external.AddWaypointFromMap){{
-            window.external.AddWaypointFromMap(e.latlng.lat, e.latlng.lng);
+            try{{ window.external.AddWaypointFromMap(e.latlng.lat, e.latlng.lng); }}catch(err){{ /* ignore automation errors */ }}
         }}
     }});
     function clearWaypoints(){{
