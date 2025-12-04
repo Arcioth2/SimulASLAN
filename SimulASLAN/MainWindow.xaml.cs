@@ -345,7 +345,7 @@ namespace WpfApp1
             toTarget.Normalize();
             double speed = 12.0;
             _physics.Position += toTarget * speed * deltaTime;
-            _physics.Velocity = toTarget * speed;
+            _physics.OverrideVelocity(toTarget * speed);
             _physics.Yaw = targetWp.Heading;
 
             txtNextAction.Text = _language == "TR"
@@ -415,7 +415,7 @@ namespace WpfApp1
         {
             _missionRunning = false;
             _physics.Position = new Vector3D(0, 0, 0.5);
-            _physics.Velocity = new Vector3D(0, 0, 0);
+            _physics.OverrideVelocity(new Vector3D(0, 0, 0));
             txtNextAction.Text = _language == "TR" ? "Acil durum devrede" : "Failsafe triggered";
         }
 
