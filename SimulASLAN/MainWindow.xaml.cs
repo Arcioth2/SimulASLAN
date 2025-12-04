@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
@@ -15,6 +16,7 @@ using System.Windows.Media.Media3D;
 
 namespace WpfApp1
 {
+    [ComVisible(true)]
     public partial class MainWindow : Window
     {
         private readonly DronePhysics _physics = new DronePhysics();
@@ -38,11 +40,13 @@ namespace WpfApp1
         private int _currentWaypointIndex = 0;
         private bool _mapReady = false;
         private readonly string _missionsFolder;
+        private readonly ModelVisual3D _waypointsGroup = new ModelVisual3D();
 
         public MainWindow(double lat, double lon, int quality, string language)
         {
             InitializeComponent();
 
+            MissionMap.ObjectForScripting = this;
             _centerLat = lat;
             _centerLon = lon;
             _mapScale = quality;
@@ -109,6 +113,7 @@ namespace WpfApp1
 
                 await InitializeMapAsync();
                 InitializeDroneVisuals();
+                EnsureWaypointVisualLayer();
 
                 LoadingOverlay.Visibility = Visibility.Collapsed;
                 _isSimulationRunning = true;
@@ -510,6 +515,11 @@ namespace WpfApp1
     var map=L.map('map').setView([{lat},{lon}], 14);
     L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png',{{maxZoom:19}}).addTo(map);
     var markers=[]; var line=null;
+    map.on('click', function(e){{
+        if(window.external && window.external.AddWaypointFromMap){{
+            window.external.AddWaypointFromMap(e.latlng.lat, e.latlng.lng);
+        }}
+    }});
     function clearWaypoints(){{
         markers.forEach(function(m){{ map.removeLayer(m); }});
         markers=[];
@@ -551,6 +561,7 @@ namespace WpfApp1
                 string json = JsonSerializer.Serialize(renderData);
                 MissionMap.InvokeScript("setWaypoints", new object[] { json });
                 txtMapStatus.Text = _language == "TR" ? $"{_activeMission.Waypoints.Count} nokta" : $"{_activeMission.Waypoints.Count} waypoints";
+                RenderWaypointModels();
             }
             catch (Exception ex)
             {
@@ -642,6 +653,66 @@ namespace WpfApp1
             }
 
             Application.Current.Shutdown();
+        }
+
+        public void AddWaypointFromMap(double latitude, double longitude)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                txtLat.Text = latitude.ToString(CultureInfo.InvariantCulture);
+                txtLon.Text = longitude.ToString(CultureInfo.InvariantCulture);
+
+                if (!double.TryParse(txtAlt.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double altitude))
+                {
+                    altitude = 20;
+                    txtAlt.Text = altitude.ToString(CultureInfo.InvariantCulture);
+                }
+
+                if (!double.TryParse(txtHeading.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double heading))
+                {
+                    heading = 0;
+                    txtHeading.Text = heading.ToString(CultureInfo.InvariantCulture);
+                }
+
+                var waypoint = new MissionWaypoint
+                {
+                    Latitude = latitude,
+                    Longitude = longitude,
+                    Altitude = altitude,
+                    Heading = heading
+                };
+
+                _activeMission.Waypoints.Add(waypoint);
+                UpdateMissionListDisplay();
+                SyncMapWaypoints();
+            });
+        }
+
+        private void EnsureWaypointVisualLayer()
+        {
+            if (!viewPort.Children.Contains(_waypointsGroup))
+            {
+                viewPort.Children.Add(_waypointsGroup);
+            }
+        }
+
+        private void RenderWaypointModels()
+        {
+            EnsureWaypointVisualLayer();
+            _waypointsGroup.Children.Clear();
+
+            foreach (var wp in _activeMission.Waypoints)
+            {
+                var local = LatLonToLocal(wp.Latitude, wp.Longitude);
+                var sphere = new SphereVisual3D
+                {
+                    Center = new Point3D(local.X, local.Y, wp.Altitude),
+                    Radius = 1.5,
+                    Material = MaterialHelper.CreateMaterial(Colors.Red)
+                };
+
+                _waypointsGroup.Children.Add(sphere);
+            }
         }
     }
 }
