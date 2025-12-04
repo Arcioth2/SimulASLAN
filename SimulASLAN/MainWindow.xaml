@@ -104,49 +104,53 @@
                         </Grid>
                     </Border>
 
-                    <StackPanel Grid.Column="1" Margin="15" Background="#1A1A1A" Padding="12" Spacing="6" >
-                        <TextBlock Text="Waypoint Editor" FontWeight="Bold" Foreground="White" FontSize="14"/>
-                        <TextBlock Text="Latitude" Foreground="Gray"/>
-                        <TextBox x:Name="txtLat" Background="#222" Foreground="White"/>
-                        <TextBlock Text="Longitude" Foreground="Gray"/>
-                        <TextBox x:Name="txtLon" Background="#222" Foreground="White"/>
-                        <TextBlock Text="Altitude (m)" Foreground="Gray"/>
-                        <TextBox x:Name="txtAlt" Background="#222" Foreground="White"/>
-                        <TextBlock Text="Heading (deg)" Foreground="Gray"/>
-                        <TextBox x:Name="txtHeading" Background="#222" Foreground="White"/>
+                    <Border Grid.Column="1" Margin="15" Background="#1A1A1A" Padding="12">
+                        <StackPanel>
+                            <TextBlock Text="Waypoint Editor" FontWeight="Bold" Foreground="White" FontSize="14" Margin="0,0,0,6"/>
+                            <TextBlock Text="Latitude" Foreground="Gray" Margin="0,0,0,6"/>
+                            <TextBox x:Name="txtLat" Background="#222" Foreground="White" Margin="0,0,0,6"/>
+                            <TextBlock Text="Longitude" Foreground="Gray" Margin="0,0,0,6"/>
+                            <TextBox x:Name="txtLon" Background="#222" Foreground="White" Margin="0,0,0,6"/>
+                            <TextBlock Text="Altitude (m)" Foreground="Gray" Margin="0,0,0,6"/>
+                            <TextBox x:Name="txtAlt" Background="#222" Foreground="White" Margin="0,0,0,6"/>
+                            <TextBlock Text="Heading (deg)" Foreground="Gray" Margin="0,0,0,6"/>
+                            <TextBox x:Name="txtHeading" Background="#222" Foreground="White" Margin="0,0,0,6"/>
 
-                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0" Spacing="6">
-                            <Button Content="Add Waypoint" Click="BtnAddWaypoint_Click" Padding="6" Width="110"/>
-                            <Button Content="Update" Click="BtnUpdateWaypoint_Click" Padding="6" Width="80"/>
-                            <Button Content="Remove" Click="BtnRemoveWaypoint_Click" Padding="6" Width="80"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <Button Content="Add Waypoint" Click="BtnAddWaypoint_Click" Padding="6" Width="110" Margin="0,0,6,0"/>
+                                <Button Content="Update" Click="BtnUpdateWaypoint_Click" Padding="6" Width="80" Margin="0,0,6,0"/>
+                                <Button Content="Remove" Click="BtnRemoveWaypoint_Click" Padding="6" Width="80"/>
+                            </StackPanel>
+
+                            <ListBox x:Name="lstWaypoints" Height="200" SelectionChanged="LstWaypoints_SelectionChanged" Background="#111" Foreground="White" BorderBrush="#333" Margin="0,6,0,0"/>
+
+                            <Separator Margin="0,8"/>
+                            <TextBlock Text="Mission Name" Foreground="Gray" Margin="0,0,0,6"/>
+                            <TextBox x:Name="txtMissionName" Background="#222" Foreground="White" Margin="0,0,0,6"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="Save Mission" Click="BtnSaveMission_Click" Padding="6" Width="110" Margin="0,0,6,0"/>
+                                <Button Content="Clear" Click="BtnClearMission_Click" Padding="6" Width="70"/>
+                            </StackPanel>
+
+                            <Separator Margin="0,8"/>
+                            <TextBlock Text="Saved Missions" Foreground="Gray" Margin="0,0,0,6"/>
+                            <StackPanel Orientation="Horizontal">
+                                <ComboBox x:Name="cmbSavedMissions" Width="180" Background="#222" Foreground="White" Margin="0,0,6,0"/>
+                                <Button Content="Load" Click="BtnLoadMission_Click" Padding="6" Width="60"/>
+                            </StackPanel>
                         </StackPanel>
-
-                        <ListBox x:Name="lstWaypoints" Height="200" SelectionChanged="LstWaypoints_SelectionChanged" Background="#111" Foreground="White" BorderBrush="#333"/>
-
-                        <Separator Margin="0,8"/>
-                        <TextBlock Text="Mission Name" Foreground="Gray"/>
-                        <TextBox x:Name="txtMissionName" Background="#222" Foreground="White"/>
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Button Content="Save Mission" Click="BtnSaveMission_Click" Padding="6" Width="110"/>
-                            <Button Content="Clear" Click="BtnClearMission_Click" Padding="6" Width="70"/>
-                        </StackPanel>
-
-                        <Separator Margin="0,8"/>
-                        <TextBlock Text="Saved Missions" Foreground="Gray"/>
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <ComboBox x:Name="cmbSavedMissions" Width="180" Background="#222" Foreground="White"/>
-                            <Button Content="Load" Click="BtnLoadMission_Click" Padding="6" Width="60"/>
-                        </StackPanel>
-                    </StackPanel>
+                    </Border>
                 </Grid>
             </TabItem>
 
             <!-- Settings Tab -->
             <TabItem Header="Settings">
-                <StackPanel Margin="20" Background="#111" Padding="10">
-                    <TextBlock Text="Settings" FontSize="16" FontWeight="Bold" Foreground="White" Margin="0,0,0,10"/>
-                    <Button Content="Reload Application" Click="BtnReloadApp_Click" Padding="8" Width="180"/>
-                </StackPanel>
+                <Border Margin="20" Background="#111" Padding="10">
+                    <StackPanel>
+                        <TextBlock Text="Settings" FontSize="16" FontWeight="Bold" Foreground="White" Margin="0,0,0,10"/>
+                        <Button Content="Reload Application" Click="BtnReloadApp_Click" Padding="8" Width="180"/>
+                    </StackPanel>
+                </Border>
             </TabItem>
         </TabControl>
     </DockPanel>
