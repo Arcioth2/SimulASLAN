@@ -21,6 +21,11 @@ namespace WpfApp1
         public double ThrottleInput { get; set; }
         public bool IsBoosting { get; set; }
 
+        public void OverrideVelocity(Vector3D newVelocity)
+        {
+            Velocity = newVelocity;
+        }
+
         public void ApplyForwardImpulse(double strength)
         {
             double yRad = Yaw * Math.PI / 180.0;
