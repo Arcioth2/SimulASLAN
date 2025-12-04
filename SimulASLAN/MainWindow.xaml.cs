@@ -13,7 +13,6 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
-using System.Reflection;
 
 namespace WpfApp1
 {
@@ -35,6 +34,7 @@ namespace WpfApp1
         private string _language;
         private const double MapSideMeters = 833;
         private (double metersPerLat, double metersPerLon) _metersPerDegree;
+        private (double swLat, double swLon, double neLat, double neLon) _mapBounds;
 
         private MissionPlan _activeMission = new MissionPlan { Name = "New Mission" };
         private bool _missionRunning = false;
@@ -47,8 +47,6 @@ namespace WpfApp1
         {
             InitializeComponent();
 
-            SuppressWebBrowserScriptErrors();
-            MissionMap.ObjectForScripting = this;
             _centerLat = lat;
             _centerLon = lon;
             _mapScale = quality;
@@ -61,24 +59,7 @@ namespace WpfApp1
             txtCoords.Text = (_language == "TR" ? "Konum: " : "Loc: ") + $"{_centerLat:F5}, {_centerLon:F5} | Q: {_mapScale}";
             InitializeMissionPlannerFields();
             PopulateSavedMissions();
-            MissionMap.NavigateToString(BuildMapHtml());
             InitializeSimulatorAsync();
-        }
-
-        private void SuppressWebBrowserScriptErrors()
-        {
-            try
-            {
-                var ax = MissionMap.GetType().InvokeMember("ActiveXInstance", BindingFlags.GetProperty | BindingFlags.Instance | BindingFlags.NonPublic, null, MissionMap, new object[0]);
-                if (ax != null)
-                {
-                    ax.GetType().InvokeMember("Silent", BindingFlags.SetProperty, null, ax, new object[] { true });
-                }
-            }
-            catch
-            {
-                // Best effort: if we cannot reach the underlying ActiveX control, keep default behavior.
-            }
         }
 
         public MainWindow() : this(41.145253, 29.3678, 4, "EN") { }
@@ -163,6 +144,8 @@ namespace WpfApp1
             double neLat = _centerLat + deltaLat;
             double neLon = _centerLon + deltaLon;
 
+            _mapBounds = (swLat, swLon, neLat, neLon);
+
             string url = string.Format(CultureInfo.InvariantCulture,
                 "https://www.google.com/maps/d/u/0/mapimage?mid=1p__1h3xMyAPFLMpgxqZStptq4kwdx_I&llsw={0},{1}&llne={2},{3}&w=1600&h=1600&scale={4}",
                 swLat, swLon, neLat, neLon, _mapScale);
@@ -221,6 +204,19 @@ namespace WpfApp1
                     Application.Current.Shutdown();
                     return;
                 }
+            }
+
+            try
+            {
+                var bitmap = new System.Windows.Media.Imaging.BitmapImage(new Uri(finalPath));
+                MissionMapImage.Source = bitmap;
+                _mapReady = true;
+                txtMapStatus.Text = _language == "TR" ? "Harita hazır" : "Map ready";
+                SyncMapWaypoints();
+            }
+            catch (Exception ex)
+            {
+                txtMapStatus.Text = _language == "TR" ? $"Harita yüklenemedi: {ex.Message}" : $"Map failed to load: {ex.Message}";
             }
 
             txtStatus.Text = _language == "TR" ? "Oluşturuluyor..." : "Rendering...";
@@ -515,72 +511,13 @@ namespace WpfApp1
             txtMissionName.Text = _activeMission.Name;
         }
 
-        private string BuildMapHtml()
-        {
-            string lat = _centerLat.ToString(CultureInfo.InvariantCulture);
-            string lon = _centerLon.ToString(CultureInfo.InvariantCulture);
-            return $@"<!doctype html>
-<html>
-<head>
-    <meta http-equiv='X-UA-Compatible' content='IE=Edge'/>
-    <style>html,body,#map{{height:100%;margin:0;padding:0;background:#111;color:#fff;}}</style>
-    <!-- Leaflet 1.9+ drops Internet Explorer support. The WebBrowser control runs on the installed IE engine, so
-         using a legacy-compatible release avoids script errors when clicking the map. -->
-    <link rel='stylesheet' href='https://unpkg.com/leaflet@1.7.1/dist/leaflet.css'/>
-    <script src='https://unpkg.com/leaflet@1.7.1/dist/leaflet.js'></script>
-</head>
-<body>
-<div id='map'></div>
-<script>
-    var map=L.map('map').setView([{lat},{lon}], 14);
-    L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png',{{maxZoom:19}}).addTo(map);
-    var markers=[]; var line=null;
-    map.on('click', function(e){{
-        if(window.external && window.external.AddWaypointFromMap){{
-            try{{ window.external.AddWaypointFromMap(e.latlng.lat, e.latlng.lng); }}catch(err){{ /* ignore automation errors */ }}
-        }}
-    }});
-    function clearWaypoints(){{
-        markers.forEach(function(m){{ map.removeLayer(m); }});
-        markers=[];
-        if(line){{ map.removeLayer(line); line=null; }}
-    }}
-    function setWaypoints(json){{
-        clearWaypoints();
-        if(!json) return;
-        var pts=JSON.parse(json);
-        if(!pts.length) return;
-        var latlngs=[];
-        pts.forEach(function(p,i){{
-            var marker=L.marker([p.lat,p.lng]).addTo(map).bindPopup('WP '+(i+1)+'<br/>Alt: '+p.alt+'<br/>Heading: '+p.heading);
-            markers.push(marker);
-            latlngs.push([p.lat,p.lng]);
-        }});
-        line=L.polyline(latlngs,{{color:'#00bcd4'}}).addTo(map);
-        map.fitBounds(line.getBounds().pad(0.2));
-    }}
-</script>
-</body>
-</html>";
-        }
-
-        private void MissionMap_LoadCompleted(object sender, System.Windows.Navigation.NavigationEventArgs e)
-        {
-            _mapReady = true;
-            txtMapStatus.Text = _language == "TR" ? "Harita hazır" : "Map ready";
-            SyncMapWaypoints();
-        }
-
         private void SyncMapWaypoints()
         {
             if (!_mapReady) return;
 
             try
             {
-                var renderData = _activeMission.Waypoints.Select(wp => new { lat = wp.Latitude, lng = wp.Longitude, alt = wp.Altitude, heading = wp.Heading });
-                string json = JsonSerializer.Serialize(renderData);
-                MissionMap.InvokeScript("setWaypoints", new object[] { json });
-                txtMapStatus.Text = _language == "TR" ? $"{_activeMission.Waypoints.Count} nokta" : $"{_activeMission.Waypoints.Count} waypoints";
+                RenderWaypointOverlays();
                 RenderWaypointModels();
             }
             catch (Exception ex)
@@ -747,6 +684,69 @@ namespace WpfApp1
 
                 _waypointsGroup.Children.Add(sphere);
             }
+        }
+
+        private void RenderWaypointOverlays()
+        {
+            MissionMapOverlay.Children.Clear();
+
+            if (MissionMapImage.Source == null || MissionMapImage.ActualWidth <= 0 || MissionMapImage.ActualHeight <= 0) return;
+
+            var polyline = new System.Windows.Shapes.Polyline
+            {
+                Stroke = new SolidColorBrush(Color.FromRgb(0, 188, 212)),
+                StrokeThickness = 2
+            };
+
+            foreach (var wp in _activeMission.Waypoints)
+            {
+                var (x, y) = LatLonToPixel(wp.Latitude, wp.Longitude, MissionMapImage.ActualWidth, MissionMapImage.ActualHeight);
+
+                var marker = new System.Windows.Shapes.Ellipse
+                {
+                    Width = 10,
+                    Height = 10,
+                    Fill = Brushes.Red,
+                    Stroke = Brushes.White,
+                    StrokeThickness = 1
+                };
+
+                Canvas.SetLeft(marker, x - 5);
+                Canvas.SetTop(marker, y - 5);
+                MissionMapOverlay.Children.Add(marker);
+
+                polyline.Points.Add(new System.Windows.Point(x, y));
+            }
+
+            if (polyline.Points.Count > 1)
+            {
+                MissionMapOverlay.Children.Insert(0, polyline);
+            }
+
+            txtMapStatus.Text = _language == "TR" ? $"{_activeMission.Waypoints.Count} nokta" : $"{_activeMission.Waypoints.Count} waypoints";
+        }
+
+        private (double lat, double lon) PixelToLatLon(double x, double y, double width, double height)
+        {
+            double lon = _mapBounds.swLon + (_mapBounds.neLon - _mapBounds.swLon) * (x / width);
+            double lat = _mapBounds.neLat - (_mapBounds.neLat - _mapBounds.swLat) * (y / height);
+            return (lat, lon);
+        }
+
+        private (double x, double y) LatLonToPixel(double lat, double lon, double width, double height)
+        {
+            double x = (lon - _mapBounds.swLon) / (_mapBounds.neLon - _mapBounds.swLon) * width;
+            double y = (_mapBounds.neLat - lat) / (_mapBounds.neLat - _mapBounds.swLat) * height;
+            return (x, y);
+        }
+
+        private void MapHost_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (!_mapReady || MissionMapImage.ActualWidth <= 0 || MissionMapImage.ActualHeight <= 0) return;
+
+            var pos = e.GetPosition(MissionMapImage);
+            var (lat, lon) = PixelToLatLon(pos.X, pos.Y, MissionMapImage.ActualWidth, MissionMapImage.ActualHeight);
+            AddWaypointFromMap(lat, lon);
         }
     }
 }
