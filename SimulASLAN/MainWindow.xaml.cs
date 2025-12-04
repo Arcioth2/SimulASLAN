@@ -657,35 +657,49 @@ namespace WpfApp1
 
         public void AddWaypointFromMap(double latitude, double longitude)
         {
-            Dispatcher.Invoke(() =>
+            try
             {
-                txtLat.Text = latitude.ToString(CultureInfo.InvariantCulture);
-                txtLon.Text = longitude.ToString(CultureInfo.InvariantCulture);
-
-                if (!double.TryParse(txtAlt.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double altitude))
+                Dispatcher.Invoke(() =>
                 {
-                    altitude = 20;
-                    txtAlt.Text = altitude.ToString(CultureInfo.InvariantCulture);
-                }
+                    txtLat.Text = latitude.ToString(CultureInfo.InvariantCulture);
+                    txtLon.Text = longitude.ToString(CultureInfo.InvariantCulture);
 
-                if (!double.TryParse(txtHeading.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double heading))
+                    _activeMission ??= new MissionPlan { Name = "New Mission" };
+
+                    if (!double.TryParse(txtAlt.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double altitude))
+                    {
+                        altitude = 20;
+                        txtAlt.Text = altitude.ToString(CultureInfo.InvariantCulture);
+                    }
+
+                    if (!double.TryParse(txtHeading.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double heading))
+                    {
+                        heading = 0;
+                        txtHeading.Text = heading.ToString(CultureInfo.InvariantCulture);
+                    }
+
+                    var waypoint = new MissionWaypoint
+                    {
+                        Latitude = latitude,
+                        Longitude = longitude,
+                        Altitude = altitude,
+                        Heading = heading
+                    };
+
+                    _activeMission.Waypoints.Add(waypoint);
+                    UpdateMissionListDisplay();
+                    SyncMapWaypoints();
+                });
+            }
+            catch (Exception ex)
+            {
+                Dispatcher.Invoke(() =>
                 {
-                    heading = 0;
-                    txtHeading.Text = heading.ToString(CultureInfo.InvariantCulture);
-                }
-
-                var waypoint = new MissionWaypoint
-                {
-                    Latitude = latitude,
-                    Longitude = longitude,
-                    Altitude = altitude,
-                    Heading = heading
-                };
-
-                _activeMission.Waypoints.Add(waypoint);
-                UpdateMissionListDisplay();
-                SyncMapWaypoints();
-            });
+                    txtMapStatus.Text = _language == "TR"
+                        ? $"Harita tıklaması işlenemedi: {ex.Message}"
+                        : $"Map click failed: {ex.Message}";
+                });
+            }
         }
 
         private void EnsureWaypointVisualLayer()
