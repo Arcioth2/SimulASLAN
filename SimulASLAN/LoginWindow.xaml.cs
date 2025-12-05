@@ -16,6 +16,11 @@ namespace WpfApp1
         public LoginWindow()
         {
             InitializeComponent();
+            Loaded += LoginWindow_Loaded;
+        }
+
+        private void LoginWindow_Loaded(object sender, RoutedEventArgs e)
+        {
             UpdateCoverageLabel();
             PlayGreetingWithDelay();
         }
@@ -137,19 +142,34 @@ namespace WpfApp1
             UpdateCoverageLabel();
         }
 
+        private void EnsureCoverageControls()
+        {
+            if (sliderCoverage == null)
+            {
+                sliderCoverage = FindName("sliderCoverage") as Slider;
+            }
+
+            if (lblCoverageValue == null)
+            {
+                lblCoverageValue = FindName("lblCoverageValue") as TextBlock;
+            }
+        }
+
         private void UpdateCoverageLabel()
         {
-            Slider coverageSlider = sliderCoverage ?? (Slider)FindName("sliderCoverage");
-            TextBlock coverageLabel = lblCoverageValue ?? (TextBlock)FindName("lblCoverageValue");
-
-            double coverageValue = coverageSlider?.Value ?? 0;
-
-            if (coverageLabel == null)
+            if (!IsLoaded)
             {
                 return;
             }
 
-            coverageLabel.Text = $"{coverageValue:F0} m";
+            EnsureCoverageControls();
+
+            if (sliderCoverage == null || lblCoverageValue == null)
+            {
+                return;
+            }
+
+            lblCoverageValue.Text = $"{sliderCoverage.Value:F0} m";
         }
     }
 }
