@@ -1,4 +1,4 @@
-﻿// ... existing imports ...
+// ... existing imports ...
 using System;
 using System.Windows;
 using System.Windows.Controls;
@@ -139,12 +139,17 @@ namespace WpfApp1
 
         private void UpdateCoverageLabel()
         {
-            if (sliderCoverage == null || lblCoverageValue == null)
+            Slider coverageSlider = sliderCoverage ?? (Slider)FindName("sliderCoverage");
+            TextBlock coverageLabel = lblCoverageValue ?? (TextBlock)FindName("lblCoverageValue");
+
+            double coverageValue = coverageSlider?.Value ?? 0;
+
+            if (coverageLabel == null)
             {
                 return;
             }
 
-            lblCoverageValue.Text = $"{sliderCoverage.Value:F0} m";
+            coverageLabel.Text = $"{coverageValue:F0} m";
         }
     }
 }
