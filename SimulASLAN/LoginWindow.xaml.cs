@@ -16,6 +16,7 @@ namespace WpfApp1
         public LoginWindow()
         {
             InitializeComponent();
+            UpdateCoverageLabel();
             PlayGreetingWithDelay();
         }
 
@@ -54,6 +55,8 @@ namespace WpfApp1
                 lblCoords.Text = "Hedef Koordinatlar (Enlem, Boylam)";
                 lblQuality.Text = "Harita Kalitesi (1-5)";
                 lblQualityHint.Text = "(Yüksek = Daha İyi Detay, Yavaş İndirme)";
+                lblCoverage.Text = "Harita Kapsamı (metre)";
+                lblCoverageHint.Text = "(Bağlantı açıldığında indirilecek kapsama alanı)";
                 btnLogin.Content = "SİMÜLASYONU BAŞLAT";
                 btnTr.FontWeight = FontWeights.Bold;
                 btnEn.FontWeight = FontWeights.Normal;
@@ -66,10 +69,14 @@ namespace WpfApp1
                 lblCoords.Text = "Target Coordinates (Lat, Lon)";
                 lblQuality.Text = "Map Quality (Scale 1-5)";
                 lblQualityHint.Text = "(Higher = Better Detail, Slower Download)";
+                lblCoverage.Text = "Map Coverage (meters)";
+                lblCoverageHint.Text = "(Sets the area downloaded when the link opens)";
                 btnLogin.Content = "INITIATE SIMULATION";
                 btnEn.FontWeight = FontWeights.Bold;
                 btnTr.FontWeight = FontWeights.Normal;
             }
+
+            UpdateCoverageLabel();
         }
 
         private void PlayAudioFile(string fileName)
@@ -99,9 +106,10 @@ namespace WpfApp1
                         double lon = double.Parse(parts[1].Trim(), System.Globalization.CultureInfo.InvariantCulture);
 
                         int quality = (int)sliderQuality.Value;
+                        double coverage = sliderCoverage.Value;
 
                         // UPDATED LINE: Pass currentLang to MainWindow
-                        MainWindow main = new MainWindow(lat, lon, quality, currentLang);
+                        MainWindow main = new MainWindow(lat, lon, quality, currentLang, coverage);
                         main.Show();
                         this.Close();
                     }
@@ -122,6 +130,16 @@ namespace WpfApp1
                 txtError.Text = currentLang == "TR" ? "Geçersiz Kimlik Bilgileri" : "Invalid Credentials";
                 PlayAudioFile(currentLang == "TR" ? "invalid_credidentials_tr.wav" : "invalid_credidentials_en.wav");
             }
+        }
+
+        private void SliderCoverage_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            UpdateCoverageLabel();
+        }
+
+        private void UpdateCoverageLabel()
+        {
+            lblCoverageValue.Text = $"{sliderCoverage.Value:F0} m";
         }
     }
 }

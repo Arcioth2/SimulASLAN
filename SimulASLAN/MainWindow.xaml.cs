@@ -32,7 +32,8 @@ namespace WpfApp1
         private double _centerLon;
         private int _mapScale;
         private string _language;
-        private const double MapSideMeters = 833;
+        private const double DefaultMapSideMeters = 833;
+        private readonly double _mapSideMeters;
         private (double metersPerLat, double metersPerLon) _metersPerDegree;
         private (double swLat, double swLon, double neLat, double neLon) _mapBounds;
 
@@ -43,7 +44,7 @@ namespace WpfApp1
         private readonly string _missionsFolder;
         private readonly ModelVisual3D _waypointsGroup = new ModelVisual3D();
 
-        public MainWindow(double lat, double lon, int quality, string language)
+        public MainWindow(double lat, double lon, int quality, string language, double mapSideMeters)
         {
             InitializeComponent();
 
@@ -51,18 +52,19 @@ namespace WpfApp1
             _centerLon = lon;
             _mapScale = quality;
             _language = language;
+            _mapSideMeters = mapSideMeters;
             _missionsFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "missions");
             Directory.CreateDirectory(_missionsFolder);
 
             ApplyLanguage();
 
-            txtCoords.Text = (_language == "TR" ? "Konum: " : "Loc: ") + $"{_centerLat:F5}, {_centerLon:F5} | Q: {_mapScale}";
+            txtCoords.Text = (_language == "TR" ? "Konum: " : "Loc: ") + $"{_centerLat:F5}, {_centerLon:F5} | Q: {_mapScale} | {_mapSideMeters:F0}m";
             InitializeMissionPlannerFields();
             PopulateSavedMissions();
             InitializeSimulatorAsync();
         }
 
-        public MainWindow() : this(41.145253, 29.3678, 4, "EN") { }
+        public MainWindow() : this(41.145253, 29.3678, 4, "EN", DefaultMapSideMeters) { }
 
         private void ApplyLanguage()
         {
@@ -136,8 +138,8 @@ namespace WpfApp1
             double metersPerLon = 111132 * Math.Cos(_centerLat * Math.PI / 180.0);
             _metersPerDegree = (metersPerLat, metersPerLon);
 
-            double deltaLat = (MapSideMeters / 2.0) / metersPerLat;
-            double deltaLon = (MapSideMeters / 2.0) / metersPerLon;
+            double deltaLat = (_mapSideMeters / 2.0) / metersPerLat;
+            double deltaLon = (_mapSideMeters / 2.0) / metersPerLon;
 
             double swLat = _centerLat - deltaLat;
             double swLon = _centerLon - deltaLon;
@@ -150,59 +152,54 @@ namespace WpfApp1
                 "https://www.google.com/maps/d/u/0/mapimage?mid=1p__1h3xMyAPFLMpgxqZStptq4kwdx_I&llsw={0},{1}&llne={2},{3}&w=1600&h=1600&scale={4}",
                 swLat, swLon, neLat, neLon, _mapScale);
 
-            string fileName = $"map_{_centerLat}_{_centerLon}.jpg";
+            string fileName = string.Format(CultureInfo.InvariantCulture, "map_{0}_{1}_{2}m.jpg", _centerLat, _centerLon, _mapSideMeters);
             string finalPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName);
+            string downloadsFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+            string sourceFile = Path.Combine(downloadsFolder, "mapimage.jpg");
+            string bundledFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "mapimage.jpg");
 
             if (!File.Exists(finalPath))
             {
-                txtStatus.Text = _language == "TR" ? "Tarayıcı Açılıyor... Lütfen Resmi Kaydedin." : "Opening Browser... Please Save Image.";
+                bool copiedImmediately = TryCopyDownloadedMap(sourceFile, bundledFile, finalPath);
 
-                try
+                if (!copiedImmediately)
                 {
-                    Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
-                }
-                catch
-                {
-                    Clipboard.SetText(url);
-                    MessageBox.Show(_language == "TR" ? "Link kopyalandı. Lütfen tarayıcıya yapıştırın." : "Link copied to clipboard. Please paste into your browser.");
-                }
+                    txtStatus.Text = _language == "TR" ? "Tarayıcı Açılıyor... Lütfen Resmi Kaydedin." : "Opening Browser... Please Save Image.";
 
-                string downloadsFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-                string sourceFile = Path.Combine(downloadsFolder, "mapimage.jpg");
-
-                if (File.Exists(sourceFile)) File.Delete(sourceFile);
-
-                txtStatus.Text = _language == "TR" ? "'mapimage.jpg' İndirilenler Klasöründe Bekleniyor..." : "Waiting for 'mapimage.jpg' in Downloads...";
-
-                bool found = false;
-                for (int i = 0; i < 60; i++)
-                {
-                    if (File.Exists(sourceFile))
+                    try
                     {
-                        await Task.Delay(500);
+                        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+                    }
+                    catch
+                    {
+                        Clipboard.SetText(url);
+                        MessageBox.Show(_language == "TR" ? "Link kopyalandı. Lütfen tarayıcıya yapıştırın." : "Link copied to clipboard. Please paste into your browser.");
+                    }
 
-                        try
+                    txtStatus.Text = _language == "TR" ? "'mapimage.jpg' İndirilenler Klasöründe Bekleniyor..." : "Waiting for 'mapimage.jpg' in Downloads...";
+
+                    bool found = false;
+                    for (int i = 0; i < 60; i++)
+                    {
+                        if (TryCopyDownloadedMap(sourceFile, bundledFile, finalPath))
                         {
-                            File.Move(sourceFile, finalPath);
                             found = true;
                             break;
                         }
-                        catch
-                        {
-                        }
+
+                        await Task.Delay(1000);
                     }
-                    await Task.Delay(1000);
-                }
 
-                if (!found)
-                {
-                    string msg = _language == "TR"
-                        ? $"Dosya bulunamadı.\nDosyayı buraya kaydettiniz mi:\n{downloadsFolder}?"
-                        : $"Timed out waiting for 'mapimage.jpg'.\nDid you save it to:\n{downloadsFolder}?";
+                    if (!found)
+                    {
+                        string msg = _language == "TR"
+                            ? $"Dosya bulunamadı.\nDosyayı buraya kaydettiniz mi:\n{downloadsFolder}?"
+                            : $"Timed out waiting for 'mapimage.jpg'.\nDid you save it to:\n{downloadsFolder}?";
 
-                    MessageBox.Show(msg);
-                    Application.Current.Shutdown();
-                    return;
+                        MessageBox.Show(msg);
+                        Application.Current.Shutdown();
+                        return;
+                    }
                 }
             }
 
@@ -211,7 +208,7 @@ namespace WpfApp1
                 var bitmap = new System.Windows.Media.Imaging.BitmapImage(new Uri(finalPath));
                 MissionMapImage.Source = bitmap;
                 _mapReady = true;
-                txtMapStatus.Text = _language == "TR" ? "Harita hazır" : "Map ready";
+                txtMapStatus.Text = _language == "TR" ? "Harita hazır - yeni nokta için tıkla" : "Map ready - click to add";
                 SyncMapWaypoints();
             }
             catch (Exception ex)
@@ -225,8 +222,8 @@ namespace WpfApp1
             var ground = new BoxVisual3D()
             {
                 Center = new Point3D(0, 0, -2.0),
-                Length = MapSideMeters,
-                Width = MapSideMeters,
+                Length = _mapSideMeters,
+                Width = _mapSideMeters,
                 Height = 0.1,
                 Material = material
             };
@@ -236,6 +233,29 @@ namespace WpfApp1
             ground.Transform = transformGroup;
 
             viewPort.Children.Add(ground);
+        }
+
+        private bool TryCopyDownloadedMap(string sourceFile, string bundledFile, string destination)
+        {
+            try
+            {
+                if (File.Exists(bundledFile))
+                {
+                    File.Copy(bundledFile, destination, true);
+                    return true;
+                }
+
+                if (File.Exists(sourceFile))
+                {
+                    File.Copy(sourceFile, destination, true);
+                    return true;
+                }
+            }
+            catch
+            {
+            }
+
+            return File.Exists(destination);
         }
 
         private void InitializeDroneVisuals()
@@ -397,6 +417,8 @@ namespace WpfApp1
 
             cam.LookDirection = new Vector3D(-camOffsetX, -camOffsetY, -camOffsetZ);
 
+            UpdateDroneShadow();
+
             if (txtTelemetry != null)
             {
                 string boostText = _physics.IsBoosting ? " [TURBO]" : "";
@@ -409,6 +431,24 @@ namespace WpfApp1
             double x = (lon - _centerLon) * _metersPerDegree.metersPerLon;
             double y = (lat - _centerLat) * _metersPerDegree.metersPerLat;
             return (x, y);
+        }
+
+        private void UpdateDroneShadow()
+        {
+            if (ShadowYawTransform == null || ShadowHeadingRotate == null || ShadowSkewTransform == null || ShadowFootprint == null || ShadowBody == null)
+            {
+                return;
+            }
+
+            ShadowYawTransform.Angle = _physics.Yaw;
+            ShadowHeadingRotate.Angle = _physics.Yaw;
+
+            ShadowSkewTransform.AngleX = _physics.Roll / 3.0;
+            ShadowSkewTransform.AngleY = -_physics.Pitch / 3.0;
+
+            double altitudeOpacity = Math.Max(0.25, 1.0 - (_physics.Position.Z / 80.0));
+            ShadowFootprint.Opacity = altitudeOpacity;
+            ShadowBody.Opacity = Math.Max(0.4, altitudeOpacity);
         }
 
         private void BtnStartMission_Click(object sender, RoutedEventArgs e)

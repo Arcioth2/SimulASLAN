@@ -30,6 +30,13 @@
             <Slider x:Name="sliderQuality" Minimum="1" Maximum="5" Value="4" TickFrequency="1" IsSnapToTickEnabled="True" AutoToolTipPlacement="TopLeft" Margin="0,0,0,5"/>
             <TextBlock x:Name="lblQualityHint" Text="(Yüksek = Daha İyi Detay, Yavaş İndirme)" Foreground="Gray" FontSize="10" HorizontalAlignment="Center" Margin="0,0,0,25"/>
 
+            <TextBlock x:Name="lblCoverage" Text="Harita Kapsamı (metre)" Foreground="#00CCFF" FontWeight="Bold" Margin="0,0,0,5"/>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                <Slider x:Name="sliderCoverage" Minimum="300" Maximum="2000" Value="833" TickFrequency="100" IsSnapToTickEnabled="True" AutoToolTipPlacement="TopLeft" Width="280" ValueChanged="SliderCoverage_ValueChanged"/>
+                <TextBlock x:Name="lblCoverageValue" Text="833 m" Foreground="White" Margin="10,0,0,0" VerticalAlignment="Center"/>
+            </StackPanel>
+            <TextBlock x:Name="lblCoverageHint" Text="(Bağlantı açıldığında indirilecek kapsama alanı)" Foreground="Gray" FontSize="10" HorizontalAlignment="Center" Margin="0,0,0,25"/>
+
             <Button x:Name="btnLogin" Content="SİMÜLASYONU BAŞLAT" Height="50" Background="#007ACC" Foreground="White" FontWeight="Bold" FontSize="14" Click="BtnLogin_Click" Cursor="Hand"/>
             <TextBlock x:Name="txtError" Foreground="Red" HorizontalAlignment="Center" Margin="0,15,0,0"/>
         </StackPanel>
