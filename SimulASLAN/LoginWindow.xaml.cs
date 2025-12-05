@@ -9,9 +9,15 @@ using System.Windows.Input;
 
 namespace WpfApp1
 {
+    public enum AppLanguage
+    {
+        Turkish,
+        English
+    }
+
     public partial class LoginWindow : Window
     {
-        private string _currentLanguage = "TR";
+        private AppLanguage _currentLanguage = AppLanguage.Turkish;
 
         public LoginWindow()
         {
@@ -29,7 +35,7 @@ namespace WpfApp1
         private async Task PlayGreetingWithDelay()
         {
             await Task.Delay(1000);
-            PlayAudioFile(_currentLanguage == "TR" ? "greet_tr.wav" : "greet_en.wav");
+            PlayAudioFile(IsTurkish ? "greet_tr.wav" : "greet_en.wav");
         }
 
         private void BtnLang_Click(object sender, RoutedEventArgs e)
@@ -39,23 +45,28 @@ namespace WpfApp1
                 return;
             }
 
-            if (tag == "EN")
+            if (!TryParseLanguage(tag, out AppLanguage lang))
+            {
+                return;
+            }
+
+            if (lang == AppLanguage.English)
             {
                 PlayAudioFile("english.wav");
             }
-            else if (tag == "TR")
+            else if (lang == AppLanguage.Turkish)
             {
                 PlayAudioFile("turkish.wav");
             }
 
-            SetLanguage(tag);
+            SetLanguage(lang);
         }
 
-        private void SetLanguage(string langCode)
+        private void SetLanguage(AppLanguage langCode)
         {
             _currentLanguage = langCode;
 
-            if (langCode == "TR")
+            if (IsTurkish)
             {
                 lblTitle.Text = "UÇUŞ YETKİLENDİRME";
                 lblUser.Text = "Kullanıcı Adı";
@@ -114,16 +125,16 @@ namespace WpfApp1
 
             if (txtUser.Text != "admin" || txtPass.Password != "password")
             {
-                txtError.Text = _currentLanguage == "TR" ? "Geçersiz Kimlik Bilgileri" : "Invalid Credentials";
-                PlayAudioFile(_currentLanguage == "TR" ? "invalid_credidentials_tr.wav" : "invalid_credidentials_en.wav");
+                txtError.Text = IsTurkish ? "Geçersiz Kimlik Bilgileri" : "Invalid Credentials";
+                PlayAudioFile(IsTurkish ? "invalid_credidentials_tr.wav" : "invalid_credidentials_en.wav");
                 return;
             }
 
             string coords = txtCoords.Text;
             if (!coords.Contains(','))
             {
-                txtError.Text = _currentLanguage == "TR" ? "Koordinatlar virgül ile ayrılmalıdır." : "Coordinates must be separated by comma";
-                PlayAudioFile(_currentLanguage == "TR" ? "coordinates_must_be_separated_by_comma_tr.wav" : "coordinates_must_be_separated_by_comma_en.wav");
+                txtError.Text = IsTurkish ? "Koordinatlar virgül ile ayrılmalıdır." : "Coordinates must be separated by comma";
+                PlayAudioFile(IsTurkish ? "coordinates_must_be_separated_by_comma_tr.wav" : "coordinates_must_be_separated_by_comma_en.wav");
                 return;
             }
 
@@ -132,15 +143,15 @@ namespace WpfApp1
                 !double.TryParse(parts[0].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double lat) ||
                 !double.TryParse(parts[1].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double lon))
             {
-                txtError.Text = _currentLanguage == "TR" ? "Geçersiz Koordinat Formatı." : "Invalid Coordinate Format.";
-                PlayAudioFile(_currentLanguage == "TR" ? "invalid_coordinate_format_tr.wav" : "invalid_coordinate_format_en.wav");
+                txtError.Text = IsTurkish ? "Geçersiz Koordinat Formatı." : "Invalid Coordinate Format.";
+                PlayAudioFile(IsTurkish ? "invalid_coordinate_format_tr.wav" : "invalid_coordinate_format_en.wav");
                 return;
             }
 
             int quality = (int)sliderQuality.Value;
             double coverage = sliderCoverage.Value;
 
-            MainWindow main = new(lat, lon, quality, _currentLanguage, coverage);
+            MainWindow main = new(lat, lon, quality, GetLanguageCode(_currentLanguage), coverage);
             main.Show();
             Close();
         }
@@ -157,5 +168,25 @@ namespace WpfApp1
                 BtnLogin_Click(sender, e);
             }
         }
+
+        private bool IsTurkish => _currentLanguage == AppLanguage.Turkish;
+
+        private static bool TryParseLanguage(string tag, out AppLanguage language)
+        {
+            switch (tag)
+            {
+                case "TR":
+                    language = AppLanguage.Turkish;
+                    return true;
+                case "EN":
+                    language = AppLanguage.English;
+                    return true;
+                default:
+                    language = AppLanguage.Turkish;
+                    return false;
+            }
+        }
+
+        private static string GetLanguageCode(AppLanguage lang) => lang == AppLanguage.Turkish ? "TR" : "EN";
     }
 }
