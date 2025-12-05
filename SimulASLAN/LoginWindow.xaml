@@ -1,4 +1,4 @@
-﻿<Window x:Class="WpfApp1.LoginWindow"
+<Window x:Class="WpfApp1.LoginWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Drone Control Access" Height="500" Width="450" 
