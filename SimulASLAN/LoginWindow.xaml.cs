@@ -23,12 +23,18 @@ namespace WpfApp1
         {
             InitializeComponent();
             Loaded += OnLoaded;
+            SetLanguage(_currentLanguage);
+            ClearErrorMessage();
             sliderCoverage.ValueChanged += (_, __) => UpdateCoverageLabel();
+            txtUser.TextChanged += (_, __) => ClearErrorMessage();
+            txtPass.PasswordChanged += (_, __) => ClearErrorMessage();
+            txtCoords.TextChanged += (_, __) => ClearErrorMessage();
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            UpdateCoverageLabel();
+            SetLanguage(_currentLanguage);
+            ClearErrorMessage();
             _ = PlayGreetingWithDelay();
         }
 
@@ -159,6 +165,11 @@ namespace WpfApp1
         private void UpdateCoverageLabel()
         {
             lblCoverageValue.Text = string.Format(CultureInfo.InvariantCulture, "{0:F0} m", sliderCoverage.Value);
+        }
+
+        private void ClearErrorMessage()
+        {
+            txtError.Text = string.Empty;
         }
 
         private void Window_KeyDown(object sender, KeyEventArgs e)

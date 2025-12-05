@@ -33,7 +33,7 @@
             <TextBlock x:Name="lblCoverage" Text="Harita Kapsamı (metre)" Foreground="#00CCFF" FontWeight="Bold" Margin="0,0,0,5"/>
             <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
                 <Slider x:Name="sliderCoverage" Minimum="300" Maximum="2000" Value="833" TickFrequency="100" IsSnapToTickEnabled="True" AutoToolTipPlacement="TopLeft" Width="280"/>
-                <TextBlock x:Name="lblCoverageValue" Foreground="White" Margin="10,0,0,0" VerticalAlignment="Center" Text="{Binding Value, ElementName=sliderCoverage, StringFormat={}{0:F0} m}"/>
+                <TextBlock x:Name="lblCoverageValue" Foreground="White" Margin="10,0,0,0" VerticalAlignment="Center"/>
             </StackPanel>
             <TextBlock x:Name="lblCoverageHint" Text="(Bağlantı açıldığında indirilecek kapsama alanı)" Foreground="Gray" FontSize="10" HorizontalAlignment="Center" Margin="0,0,0,25"/>
 
