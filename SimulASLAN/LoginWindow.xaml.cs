@@ -1,55 +1,59 @@
-// ... existing imports ...
 using System;
+using System.Globalization;
+using System.IO;
+using System.Media;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Media;
-using System.IO;
-using System.Threading.Tasks;
+using System.Windows.Input;
 
 namespace WpfApp1
 {
     public partial class LoginWindow : Window
     {
-        // Current language state set to Turkish default
-        private string currentLang = "TR";
+        private string _currentLanguage = "TR";
 
         public LoginWindow()
         {
             InitializeComponent();
-            Loaded += LoginWindow_Loaded;
+            Loaded += OnLoaded;
+            sliderCoverage.ValueChanged += (_, __) => UpdateCoverageLabel();
         }
 
-        private void LoginWindow_Loaded(object sender, RoutedEventArgs e)
+        private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            PlayGreetingWithDelay();
+            UpdateCoverageLabel();
+            _ = PlayGreetingWithDelay();
         }
 
-        private async void PlayGreetingWithDelay()
+        private async Task PlayGreetingWithDelay()
         {
             await Task.Delay(1000);
-            PlayAudioFile("greet_tr.wav");
+            PlayAudioFile(_currentLanguage == "TR" ? "greet_tr.wav" : "greet_en.wav");
         }
 
-        // ... (BtnLang_Click, SetLanguage, PlayAudioFile remain the same) ...
-
-        // RE-INCLUDING THEM HERE FOR COMPLETENESS SO THE FILE IS COPY-PASTE READY
         private void BtnLang_Click(object sender, RoutedEventArgs e)
         {
-            Button btn = sender as Button;
-            if (btn != null && btn.Tag != null)
+            if (sender is not Button { Tag: string tag })
             {
-                string selectedLang = btn.Tag.ToString();
-
-                if (selectedLang == "EN") PlayAudioFile("english.wav");
-                else if (selectedLang == "TR") PlayAudioFile("turkish.wav");
-
-                SetLanguage(selectedLang);
+                return;
             }
+
+            if (tag == "EN")
+            {
+                PlayAudioFile("english.wav");
+            }
+            else if (tag == "TR")
+            {
+                PlayAudioFile("turkish.wav");
+            }
+
+            SetLanguage(tag);
         }
 
         private void SetLanguage(string langCode)
         {
-            currentLang = langCode;
+            _currentLanguage = langCode;
 
             if (langCode == "TR")
             {
@@ -79,6 +83,8 @@ namespace WpfApp1
                 btnEn.FontWeight = FontWeights.Bold;
                 btnTr.FontWeight = FontWeights.Normal;
             }
+
+            UpdateCoverageLabel();
         }
 
         private void PlayAudioFile(string fileName)
@@ -86,53 +92,70 @@ namespace WpfApp1
             try
             {
                 string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName);
-                if (File.Exists(path)) { SoundPlayer player = new SoundPlayer(path); player.Play(); }
-                else { SystemSounds.Beep.Play(); }
+                if (File.Exists(path))
+                {
+                    using SoundPlayer player = new(path);
+                    player.Play();
+                }
+                else
+                {
+                    SystemSounds.Beep.Play();
+                }
             }
-            catch { }
+            catch
+            {
+                SystemSounds.Beep.Play();
+            }
         }
 
         private void BtnLogin_Click(object sender, RoutedEventArgs e)
         {
             SystemSounds.Beep.Play();
 
-            if (txtUser.Text == "admin" && txtPass.Password == "password")
+            if (txtUser.Text != "admin" || txtPass.Password != "password")
             {
-                string coords = txtCoords.Text;
-                if (coords.Contains(","))
-                {
-                    try
-                    {
-                        string[] parts = coords.Split(',');
-                        double lat = double.Parse(parts[0].Trim(), System.Globalization.CultureInfo.InvariantCulture);
-                        double lon = double.Parse(parts[1].Trim(), System.Globalization.CultureInfo.InvariantCulture);
-
-                        int quality = (int)sliderQuality.Value;
-                        double coverage = sliderCoverage.Value;
-
-                        // UPDATED LINE: Pass currentLang to MainWindow
-                        MainWindow main = new MainWindow(lat, lon, quality, currentLang, coverage);
-                        main.Show();
-                        this.Close();
-                    }
-                    catch
-                    {
-                        txtError.Text = currentLang == "TR" ? "Geçersiz Koordinat Formatı." : "Invalid Coordinate Format.";
-                        PlayAudioFile(currentLang == "TR" ? "invalid_coordinate_format_tr.wav" : "invalid_coordinate_format_en.wav");
-                    }
-                }
-                else
-                {
-                    txtError.Text = currentLang == "TR" ? "Koordinatlar virgül ile ayrılmalıdır." : "Coordinates must be separated by comma";
-                    PlayAudioFile(currentLang == "TR" ? "coordinates_must_be_separated_by_comma_tr.wav" : "coordinates_must_be_separated_by_comma_en.wav");
-                }
+                txtError.Text = _currentLanguage == "TR" ? "Geçersiz Kimlik Bilgileri" : "Invalid Credentials";
+                PlayAudioFile(_currentLanguage == "TR" ? "invalid_credidentials_tr.wav" : "invalid_credidentials_en.wav");
+                return;
             }
-            else
+
+            string coords = txtCoords.Text;
+            if (!coords.Contains(','))
             {
-                txtError.Text = currentLang == "TR" ? "Geçersiz Kimlik Bilgileri" : "Invalid Credentials";
-                PlayAudioFile(currentLang == "TR" ? "invalid_credidentials_tr.wav" : "invalid_credidentials_en.wav");
+                txtError.Text = _currentLanguage == "TR" ? "Koordinatlar virgül ile ayrılmalıdır." : "Coordinates must be separated by comma";
+                PlayAudioFile(_currentLanguage == "TR" ? "coordinates_must_be_separated_by_comma_tr.wav" : "coordinates_must_be_separated_by_comma_en.wav");
+                return;
             }
+
+            string[] parts = coords.Split(',');
+            if (parts.Length < 2 ||
+                !double.TryParse(parts[0].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double lat) ||
+                !double.TryParse(parts[1].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double lon))
+            {
+                txtError.Text = _currentLanguage == "TR" ? "Geçersiz Koordinat Formatı." : "Invalid Coordinate Format.";
+                PlayAudioFile(_currentLanguage == "TR" ? "invalid_coordinate_format_tr.wav" : "invalid_coordinate_format_en.wav");
+                return;
+            }
+
+            int quality = (int)sliderQuality.Value;
+            double coverage = sliderCoverage.Value;
+
+            MainWindow main = new(lat, lon, quality, _currentLanguage, coverage);
+            main.Show();
+            Close();
         }
 
+        private void UpdateCoverageLabel()
+        {
+            lblCoverageValue.Text = string.Format(CultureInfo.InvariantCulture, "{0:F0} m", sliderCoverage.Value);
+        }
+
+        private void Window_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                BtnLogin_Click(sender, e);
+            }
+        }
     }
 }
