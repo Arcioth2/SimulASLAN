@@ -21,7 +21,6 @@ namespace WpfApp1
 
         private void LoginWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            UpdateCoverageLabel();
             PlayGreetingWithDelay();
         }
 
@@ -80,8 +79,6 @@ namespace WpfApp1
                 btnEn.FontWeight = FontWeights.Bold;
                 btnTr.FontWeight = FontWeights.Normal;
             }
-
-            UpdateCoverageLabel();
         }
 
         private void PlayAudioFile(string fileName)
@@ -137,39 +134,5 @@ namespace WpfApp1
             }
         }
 
-        private void SliderCoverage_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-        {
-            UpdateCoverageLabel();
-        }
-
-        private void EnsureCoverageControls()
-        {
-            if (sliderCoverage == null)
-            {
-                sliderCoverage = FindName("sliderCoverage") as Slider;
-            }
-
-            if (lblCoverageValue == null)
-            {
-                lblCoverageValue = FindName("lblCoverageValue") as TextBlock;
-            }
-        }
-
-        private void UpdateCoverageLabel()
-        {
-            if (!IsLoaded)
-            {
-                return;
-            }
-
-            EnsureCoverageControls();
-
-            if (sliderCoverage == null || lblCoverageValue == null)
-            {
-                return;
-            }
-
-            lblCoverageValue.Text = $"{sliderCoverage.Value:F0} m";
-        }
     }
 }
