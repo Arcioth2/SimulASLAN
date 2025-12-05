@@ -139,7 +139,15 @@ namespace WpfApp1
 
         private void UpdateCoverageLabel()
         {
-            lblCoverageValue.Text = $"{sliderCoverage.Value:F0} m";
+            Slider coverageSlider = sliderCoverage ?? (Slider)FindName("sliderCoverage");
+            TextBlock coverageLabel = lblCoverageValue ?? (TextBlock)FindName("lblCoverageValue");
+
+            if (coverageSlider == null || coverageLabel == null)
+            {
+                return;
+            }
+
+            coverageLabel.Text = $"{coverageSlider.Value:F0} m";
         }
     }
 }
