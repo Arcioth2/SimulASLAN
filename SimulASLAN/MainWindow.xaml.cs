@@ -248,6 +248,13 @@ namespace WpfApp1
                 if (File.Exists(sourceFile))
                 {
                     File.Copy(sourceFile, destination, true);
+                    try
+                    {
+                        File.Delete(sourceFile);
+                    }
+                    catch
+                    {
+                    }
                     return true;
                 }
             }
