@@ -172,6 +172,20 @@
                 <Border Margin="20" Background="#111" Padding="10">
                     <StackPanel>
                         <TextBlock Text="Settings" FontSize="16" FontWeight="Bold" Foreground="White" Margin="0,0,0,10"/>
+                        <TextBlock Text="Drone Model" Foreground="Gray" Margin="0,0,0,6"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <ComboBox x:Name="cmbDroneModels"
+                                      Width="220"
+                                      Background="#222"
+                                      Foreground="White"
+                                      SelectionChanged="CmbDroneModels_SelectionChanged"
+                                      Margin="0,0,8,0"/>
+                            <Button Content="Add .obj" Click="BtnAddDroneModel_Click" Padding="6" Width="90"/>
+                        </StackPanel>
+                        <TextBlock Text="Only .obj models are supported. Newly added files will be copied into the project folder."
+                                   TextWrapping="Wrap"
+                                   Foreground="#888"
+                                   Margin="0,0,0,12"/>
                         <Button Content="Reload Application" Click="BtnReloadApp_Click" Padding="8" Width="180"/>
                     </StackPanel>
                 </Border>
