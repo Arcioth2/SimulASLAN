@@ -1,6 +1,8 @@
 // Runs on Google Maps pages to handle auto-copy and label removal
 console.log("SimulASLAN Map Toolkit content script active");
 
+handleMapImageDownloadIfPresent();
+
 let lastCopiedCoords = "";
 let notificationActive = false;
 
@@ -86,3 +88,32 @@ function checkAndCopyCoordinates() {
 })();
 
 setInterval(checkAndCopyCoordinates, 1000);
+
+function handleMapImageDownloadIfPresent() {
+  const currentUrl = window.location.href;
+
+  if (!currentUrl.includes("mapimage")) return;
+
+  console.log("[SimulASLAN] mapimage detected, requesting download...");
+
+  chrome.runtime.sendMessage({ action: "force_download", url: currentUrl });
+
+  const overlay = document.createElement("div");
+  Object.assign(overlay.style, {
+    position: "fixed",
+    top: "0",
+    left: "0",
+    width: "100%",
+    height: "100%",
+    backgroundColor: "rgba(0, 255, 0, 0.3)",
+    zIndex: "9999",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+  });
+
+  overlay.innerHTML =
+    '<h1 style="color:white; text-shadow: 2px 2px 4px #000; font-family: sans-serif;">SimulASLAN: Downloading…</h1>';
+
+  document.body.appendChild(overlay);
+}

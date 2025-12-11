@@ -7,6 +7,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "force_download") {
+    console.log("[SimulASLAN] Force download request received", message.url);
     triggerDownload(message.url, sender, sendResponse);
     return true;
   }
