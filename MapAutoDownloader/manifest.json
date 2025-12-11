@@ -1,26 +1,26 @@
 {
   "manifest_version": 3,
-  "name": "SimulASLAN Map Grabber",
-  "version": "3.0",
+  "name": "SimulASLAN Helper",
+  "version": "1.3",
   "permissions": [
-    "downloads",
-    "tabs",
     "storage",
-    "scripting"
+    "clipboardWrite",
+    "downloads"
   ],
   "host_permissions": [
-    "<all_urls>"
-  ],
-  "content_scripts": [
-    {
-      "matches": ["https://www.google.com/maps/d/u/0/mapimage*"],
-      "js": ["content.js"]
-    }
+    "https://www.google.com/maps/*"
   ],
   "background": {
     "service_worker": "background.js"
   },
+  "content_scripts": [
+    {
+      "matches": ["https://www.google.com/maps/*"],
+      "js": ["content.js", "autocopy.js"]
+    }
+  ],
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_title": "SimulASLAN Settings"
   }
 }

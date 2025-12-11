@@ -29,6 +29,26 @@
   </div>
 
   <div id="log-container"></div>
+  <!-- Add this below your logs div -->
+  <div class="settings-container" style="margin-top: 20px; padding-top: 10px; border-top: 1px solid #eee;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <span style="font-weight: bold; color: #555;">Auto Copy Coords</span>
+      <label class="switch" style="position: relative; display: inline-block; width: 40px; height: 20px;">
+        <input type="checkbox" id="autoCopySwitch" style="opacity: 0; width: 0; height: 0;">
+        <span class="slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px;"></span>
+      </label>
+    </div>
+    <div style="font-size: 11px; color: #777; margin-top: 5px;">
+      Automatically copies coordinates (excluding 'm') when opening a location.
+    </div>
+  </div>
+  
+  <style>
+    /* Add this if you don't have switch styles yet */
+    .switch input:checked + .slider { background-color: #4CAF50; }
+    .switch input:checked + .slider:before { transform: translateX(20px); }
+    .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+  </style>
   
   <button id="clearLogs" style="margin-top:5px;">Clear Logs</button>
 

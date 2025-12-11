@@ -1,32 +1,36 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const toggle = document.getElementById('pingToggle');
-    const logContainer = document.getElementById('log-container');
-    const clearBtn = document.getElementById('clearLogs');
-  
-    // Load Settings
-    chrome.storage.local.get(['pingEnabled', 'logs'], (result) => {
-      toggle.checked = result.pingEnabled !== false; // Default true
-      renderLogs(result.logs || []);
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // 1. Get the switch element
+    const autoCopySwitch = document.getElementById('autoCopySwitch');
+    
+    // Safety check: if the switch doesn't exist in HTML, stop here to prevent errors
+    if (!autoCopySwitch) return;
+
+    // 2. Load the current setting from storage
+    chrome.storage.local.get(['autoCopyEnabled'], function(result) {
+        // Default to false if undefined, otherwise use stored value
+        if (result.autoCopyEnabled) {
+            autoCopySwitch.checked = true;
+        } else {
+            autoCopySwitch.checked = false;
+        }
     });
-  
-    // Handle Toggle
-    toggle.addEventListener('change', () => {
-      chrome.storage.local.set({ pingEnabled: toggle.checked });
+
+    // 3. Save the setting when the switch is toggled
+    autoCopySwitch.addEventListener('change', function() {
+        const isEnabled = autoCopySwitch.checked;
+        chrome.storage.local.set({ autoCopyEnabled: isEnabled }, function() {
+            console.log('Auto Copy setting saved:', isEnabled);
+            
+            // Optional: Log to the UI logs area (only if it exists)
+            const logsDiv = document.getElementById('logs');
+            if (logsDiv) {
+                const newLog = document.createElement('div');
+                newLog.textContent = `> Auto Copy turned ${isEnabled ? 'ON' : 'OFF'}`;
+                newLog.style.color = isEnabled ? 'green' : 'red';
+                logsDiv.appendChild(newLog);
+                logsDiv.scrollTop = logsDiv.scrollHeight;
+            }
+        });
     });
-  
-    // Handle Clear
-    clearBtn.addEventListener('click', () => {
-      chrome.storage.local.set({ logs: [] });
-      renderLogs([]);
-    });
-  
-    function renderLogs(logs) {
-      logContainer.innerHTML = '';
-      logs.forEach(log => {
-        const div = document.createElement('div');
-        div.className = 'log-entry';
-        div.textContent = log;
-        logContainer.appendChild(div);
-      });
-    }
-  });
+});
