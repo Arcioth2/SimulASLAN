@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "SimulASLAN Tile Stitcher",
+  "version": "2.0",
+  "description": "Downloads 512x512 tiles, stitches them into a matrix, converts to JPG, and saves.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "downloads",
+    "offscreen"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "SimulASLAN Stitcher"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
