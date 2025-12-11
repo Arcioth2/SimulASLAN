@@ -13,10 +13,4 @@
     <PackageReference Include="PuppeteerSharp" Version="20.2.4" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Include="Models\**\*.*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
 </Project>

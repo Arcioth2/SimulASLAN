@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using Microsoft.Win32;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -44,10 +43,6 @@ namespace WpfApp1
         private bool _mapReady = false;
         private readonly string _missionsFolder;
         private readonly ModelVisual3D _waypointsGroup = new ModelVisual3D();
-        private readonly string _modelsFolder;
-        private readonly string _selectedModelFile;
-        private string? _currentDroneModelPath;
-        private bool _isLoadingModelList;
 
         public MainWindow(double lat, double lon, int quality, string language, double mapSideMeters)
         {
@@ -59,12 +54,7 @@ namespace WpfApp1
             _language = language;
             _mapSideMeters = mapSideMeters;
             _missionsFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "missions");
-            _modelsFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Models");
-            _selectedModelFile = Path.Combine(_modelsFolder, "selected_model.txt");
             Directory.CreateDirectory(_missionsFolder);
-            Directory.CreateDirectory(_modelsFolder);
-            EnsureBundledDroneModel();
-            RefreshDroneModelList();
 
             ApplyLanguage();
 
@@ -277,7 +267,31 @@ namespace WpfApp1
 
         private void InitializeDroneVisuals()
         {
-            ReloadDroneVisuals();
+            var importer = new ModelImporter();
+            try
+            {
+                Model3DGroup droneModel = importer.Load("Models/drone.obj");
+                var transformGroup = new Transform3DGroup();
+                transformGroup.Children.Add(new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(1, 0, 0), 90)));
+                transformGroup.Children.Add(new ScaleTransform3D(0.1, 0.1, 0.1));
+                droneModel.Transform = transformGroup;
+                droneObject.Content = droneModel;
+            }
+            catch
+            {
+                var arm1 = new BoxVisual3D() { Center = new Point3D(0, 0, 0), Length = 1.0, Width = 0.1, Height = 0.1, Fill = Brushes.Red };
+                var arm2 = new BoxVisual3D() { Center = new Point3D(0, 0, 0), Length = 0.1, Width = 1.0, Height = 0.1, Fill = Brushes.Red };
+                var front = new BoxVisual3D() { Center = new Point3D(0, 0.5, 0), Length = 0.2, Width = 0.2, Height = 0.2, Fill = Brushes.LimeGreen };
+
+                droneObject.Children.Add(arm1);
+                droneObject.Children.Add(arm2);
+                droneObject.Children.Add(front);
+            }
+
+            if (!viewPort.Children.Contains(droneObject))
+            {
+                viewPort.Children.Add(droneObject);
+            }
         }
 
         private void GameLoop(object sender, EventArgs e)
@@ -471,135 +485,6 @@ namespace WpfApp1
             txtNextAction.Text = _language == "TR" ? "Acil durum devrede" : "Failsafe triggered";
         }
 
-        private void EnsureBundledDroneModel()
-        {
-            try
-            {
-                string bundledModel = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "drone.obj");
-                string targetModel = Path.Combine(_modelsFolder, "drone.obj");
-
-                if (File.Exists(bundledModel) && !File.Exists(targetModel))
-                {
-                    File.Copy(bundledModel, targetModel, true);
-                }
-            }
-            catch
-            {
-            }
-        }
-
-        private void RefreshDroneModelList(string? preferredModel = null)
-        {
-            _isLoadingModelList = true;
-
-            var models = Directory.GetFiles(_modelsFolder, "*.obj")
-                .Select(Path.GetFileName)
-                .Where(name => name != null)
-                .Select(name => name!)
-                .OrderBy(name => name)
-                .ToList();
-
-            cmbDroneModels.ItemsSource = models;
-
-            string? savedSelection = LoadSavedDroneModelName();
-            string? selection = null;
-
-            if (preferredModel != null && models.Contains(preferredModel))
-            {
-                selection = preferredModel;
-            }
-            else if (savedSelection != null && models.Contains(savedSelection))
-            {
-                selection = savedSelection;
-            }
-            else
-            {
-                selection = models.FirstOrDefault();
-            }
-
-            cmbDroneModels.SelectedItem = selection;
-            _isLoadingModelList = false;
-
-            if (selection != null)
-            {
-                _currentDroneModelPath = Path.Combine(_modelsFolder, selection);
-                SaveSelectedDroneModel(selection);
-            }
-            else
-            {
-                _currentDroneModelPath = null;
-            }
-
-            ReloadDroneVisuals();
-        }
-
-        private string? LoadSavedDroneModelName()
-        {
-            try
-            {
-                if (File.Exists(_selectedModelFile))
-                {
-                    return File.ReadAllText(_selectedModelFile).Trim();
-                }
-            }
-            catch
-            {
-            }
-
-            return null;
-        }
-
-        private void SaveSelectedDroneModel(string modelName)
-        {
-            try
-            {
-                File.WriteAllText(_selectedModelFile, modelName);
-            }
-            catch
-            {
-            }
-        }
-
-        private void ReloadDroneVisuals()
-        {
-            droneObject.Content = null;
-            droneObject.Children.Clear();
-
-            var importer = new ModelImporter();
-
-            try
-            {
-                if (!string.IsNullOrEmpty(_currentDroneModelPath) && File.Exists(_currentDroneModelPath))
-                {
-                    Model3DGroup droneModel = importer.Load(_currentDroneModelPath);
-                    var transformGroup = new Transform3DGroup();
-                    transformGroup.Children.Add(new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(1, 0, 0), 90)));
-                    transformGroup.Children.Add(new ScaleTransform3D(0.1, 0.1, 0.1));
-                    droneModel.Transform = transformGroup;
-                    droneObject.Content = droneModel;
-                }
-                else
-                {
-                    throw new FileNotFoundException("Drone model not found");
-                }
-            }
-            catch
-            {
-                var arm1 = new BoxVisual3D() { Center = new Point3D(0, 0, 0), Length = 1.0, Width = 0.1, Height = 0.1, Fill = Brushes.Red };
-                var arm2 = new BoxVisual3D() { Center = new Point3D(0, 0, 0), Length = 0.1, Width = 1.0, Height = 0.1, Fill = Brushes.Red };
-                var front = new BoxVisual3D() { Center = new Point3D(0, 0.5, 0), Length = 0.2, Width = 0.2, Height = 0.2, Fill = Brushes.LimeGreen };
-
-                droneObject.Children.Add(arm1);
-                droneObject.Children.Add(arm2);
-                droneObject.Children.Add(front);
-            }
-
-            if (!viewPort.Children.Contains(droneObject))
-            {
-                viewPort.Children.Add(droneObject);
-            }
-        }
-
         private void InitializeMissionPlannerFields()
         {
             txtLat.Text = _centerLat.ToString(CultureInfo.InvariantCulture);
@@ -755,47 +640,6 @@ namespace WpfApp1
             txtNextAction.Text = _language == "TR"
                 ? $"Sonraki: WP {nextIndex + 1}"
                 : $"Next: WP {nextIndex + 1}";
-        }
-
-        private void CmbDroneModels_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (_isLoadingModelList) return;
-
-            if (cmbDroneModels.SelectedItem is string modelName)
-            {
-                _currentDroneModelPath = Path.Combine(_modelsFolder, modelName);
-                SaveSelectedDroneModel(modelName);
-                ReloadDroneVisuals();
-            }
-        }
-
-        private void BtnAddDroneModel_Click(object sender, RoutedEventArgs e)
-        {
-            var dialog = new OpenFileDialog
-            {
-                Filter = "OBJ models (*.obj)|*.obj",
-                Multiselect = false,
-                CheckFileExists = true,
-                Title = _language == "TR" ? "Drone modeli seç (.obj)" : "Choose drone model (.obj)"
-            };
-
-            bool? result = dialog.ShowDialog();
-            if (result != true) return;
-
-            string destinationName = Path.GetFileName(dialog.FileName);
-            string destinationPath = Path.Combine(_modelsFolder, destinationName);
-
-            try
-            {
-                File.Copy(dialog.FileName, destinationPath, true);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(_language == "TR" ? $"Model kopyalanamadı: {ex.Message}" : $"Failed to copy model: {ex.Message}");
-                return;
-            }
-
-            RefreshDroneModelList(destinationName);
         }
 
         private void BtnReloadApp_Click(object sender, RoutedEventArgs e)

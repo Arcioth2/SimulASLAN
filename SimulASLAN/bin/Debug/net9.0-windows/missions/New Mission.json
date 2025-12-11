@@ -1,0 +1,29 @@
+{
+  "Name": "New Mission",
+  "Waypoints": [
+    {
+      "Latitude": 41.14830858897979,
+      "Longitude": 29.362448638948727,
+      "Altitude": 20,
+      "Heading": 0
+    },
+    {
+      "Latitude": 41.14946958758638,
+      "Longitude": 29.36270374175074,
+      "Altitude": 20,
+      "Heading": 0
+    },
+    {
+      "Latitude": 41.15124523251411,
+      "Longitude": 29.368872591326635,
+      "Altitude": 20,
+      "Heading": 0
+    },
+    {
+      "Latitude": 41.148399647694035,
+      "Longitude": 29.373858691547756,
+      "Altitude": 20,
+      "Heading": 0
+    }
+  ]
+}
