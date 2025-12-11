@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "SimulASLAN Map Toolkit",
+  "version": "3.0",
+  "description": "Stitch map tiles, auto-download map images, auto-copy coordinates, and hide Google Maps labels.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "downloads",
+    "offscreen",
+    "storage",
+    "clipboardWrite"
+  ],
+  "host_permissions": [
+    "*://*.google.com/maps/*",
+    "https://www.google.com/maps/*",
+    "*://*/mapimage*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "SimulASLAN Map Toolkit"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.google.com/maps/*", "https://www.google.com/maps/*"],
+      "js": ["mapContent.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    },
+    {
+      "matches": ["*://*/mapimage*"],
+      "js": ["mapDownload.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["label-remover.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
