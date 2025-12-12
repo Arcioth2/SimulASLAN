@@ -22,15 +22,15 @@
                 <TextBlock x:Name="lblTitle" Text="UÇUŞ YETKİLENDİRME" Foreground="White" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,30"/>
 
                 <TextBlock x:Name="lblUser" Text="Kullanıcı Adı" Foreground="Gray"/>
-                <TextBox x:Name="txtUser" Height="35" Margin="0,5,0,15" Background="#333" Foreground="White" BorderBrush="Gray" Text="admin" VerticalContentAlignment="Center" Padding="5,0"/>
+                <TextBox x:Name="txtUser" Height="35" Margin="0,5,0,15" Background="#333" Foreground="White" BorderBrush="Gray" Text="admin" VerticalContentAlignment="Center" Padding="5,0" CaretBrush="#00FF66"/>
 
                 <TextBlock x:Name="lblPass" Text="Şifre" Foreground="Gray"/>
-                <PasswordBox x:Name="txtPass" Height="35" Margin="0,5,0,25" Background="#333" Foreground="White" BorderBrush="Gray" Password="password" VerticalContentAlignment="Center" Padding="5,0"/>
+                <PasswordBox x:Name="txtPass" Height="35" Margin="0,5,0,25" Background="#333" Foreground="White" BorderBrush="Gray" Password="password" VerticalContentAlignment="Center" Padding="5,0" CaretBrush="#00FF66"/>
 
                 <Separator Opacity="0.2" Margin="0,0,0,15"/>
 
                 <TextBlock x:Name="lblCoords" Text="Hedef Koordinatlar (Enlem, Boylam)" Foreground="#00CCFF" FontWeight="Bold"/>
-                <TextBox x:Name="txtCoords" Height="35" Margin="0,5,0,15" Background="#333" Foreground="White" BorderBrush="#00CCFF" Text="41.145253, 29.3678" VerticalContentAlignment="Center" Padding="5,0"/>
+                <TextBox x:Name="txtCoords" Height="35" Margin="0,5,0,15" Background="#333" Foreground="White" BorderBrush="#00CCFF" Text="41.145253, 29.3678" VerticalContentAlignment="Center" Padding="5,0" CaretBrush="#00FF66"/>
 
                 <TextBlock x:Name="lblQuality" Text="Harita Kalitesi (1-5)" Foreground="#00CCFF" FontWeight="Bold" Margin="0,10,0,5"/>
                 <Slider x:Name="sliderQuality" Minimum="1" Maximum="5" Value="4" TickFrequency="1" IsSnapToTickEnabled="True" AutoToolTipPlacement="TopLeft" Margin="0,0,0,5"/>

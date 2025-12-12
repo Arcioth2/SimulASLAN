@@ -33,7 +33,11 @@ namespace WpfApp1
         private int _mapScale;
         private string _language;
         private const double DefaultMapSideMeters = 833;
-        private readonly double _mapSideMeters;
+        private const double MapImagePixels = 1600.0;
+        private const double EarthRadiusMeters = 6378137.0;
+        private double _mapSideMeters;
+        private readonly bool _useGoogleMaps;
+        private readonly int _mapZoomLevel;
         private (double metersPerLat, double metersPerLon) _metersPerDegree;
         private (double swLat, double swLon, double neLat, double neLon) _mapBounds;
 
@@ -44,7 +48,7 @@ namespace WpfApp1
         private readonly string _missionsFolder;
         private readonly ModelVisual3D _waypointsGroup = new ModelVisual3D();
 
-        public MainWindow(double lat, double lon, int quality, string language, double mapSideMeters)
+        public MainWindow(double lat, double lon, int quality, string language, double mapSideMeters, bool useGoogleMaps, int mapZoomLevel)
         {
             InitializeComponent();
 
@@ -52,19 +56,21 @@ namespace WpfApp1
             _centerLon = lon;
             _mapScale = quality;
             _language = language;
-            _mapSideMeters = mapSideMeters;
+            _useGoogleMaps = useGoogleMaps;
+            _mapZoomLevel = Math.Max(1, mapZoomLevel);
+            _mapSideMeters = CalculateEffectiveCoverage(mapSideMeters);
             _missionsFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "missions");
             Directory.CreateDirectory(_missionsFolder);
 
             ApplyLanguage();
 
-            txtCoords.Text = (_language == "TR" ? "Konum: " : "Loc: ") + $"{_centerLat:F5}, {_centerLon:F5} | Q: {_mapScale} | {_mapSideMeters:F0}m";
+            txtCoords.Text = (_language == "TR" ? "Konum: " : "Loc: ") + $"{_centerLat:F5}, {_centerLon:F5} | Q: {_mapScale} | {_mapSideMeters:F0}m | Z: {_mapZoomLevel}";
             InitializeMissionPlannerFields();
             PopulateSavedMissions();
             InitializeSimulatorAsync();
         }
 
-        public MainWindow() : this(41.145253, 29.3678, 4, "EN", DefaultMapSideMeters) { }
+        public MainWindow() : this(41.145253, 29.3678, 4, "EN", DefaultMapSideMeters, false, 19) { }
 
         private void ApplyLanguage()
         {
@@ -148,9 +154,10 @@ namespace WpfApp1
 
             _mapBounds = (swLat, swLon, neLat, neLon);
 
+            int scaleParam = (int)Math.Round(GetScaleFactor());
             string url = string.Format(CultureInfo.InvariantCulture,
                 "https://www.google.com/maps/d/u/0/mapimage?mid=1p__1h3xMyAPFLMpgxqZStptq4kwdx_I&llsw={0},{1}&llne={2},{3}&w=1600&h=1600&scale={4}",
-                swLat, swLon, neLat, neLon, _mapScale);
+                swLat, swLon, neLat, neLon, scaleParam);
 
             string fileName = string.Format(CultureInfo.InvariantCulture, "map_{0}_{1}_{2}m.jpg", _centerLat, _centerLon, _mapSideMeters);
             string finalPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName);
@@ -425,6 +432,7 @@ namespace WpfApp1
             cam.LookDirection = new Vector3D(-camOffsetX, -camOffsetY, -camOffsetZ);
 
             UpdateDroneShadow();
+            UpdateLiveCoordinates();
 
             if (txtTelemetry != null)
             {
@@ -438,6 +446,79 @@ namespace WpfApp1
             double x = (lon - _centerLon) * _metersPerDegree.metersPerLon;
             double y = (lat - _centerLat) * _metersPerDegree.metersPerLat;
             return (x, y);
+        }
+
+        private (double lat, double lon) LocalToLatLon(double x, double y)
+        {
+            double halfSide = _mapSideMeters / 2.0;
+            double normalizedX = (x + halfSide) / _mapSideMeters;
+            double normalizedY = (y + halfSide) / _mapSideMeters;
+
+            double latSpan = _mapBounds.neLat - _mapBounds.swLat;
+            double lonSpan = _mapBounds.neLon - _mapBounds.swLon;
+
+            double latFromBounds = _mapBounds.swLat + normalizedY * latSpan;
+            double lonFromBounds = _mapBounds.swLon + normalizedX * lonSpan;
+
+            var (projectedX, projectedY) = LatLonToLocal(latFromBounds, lonFromBounds);
+            double errorX = x - projectedX;
+            double errorY = y - projectedY;
+
+            double correctedLat = latFromBounds + (errorY / _metersPerDegree.metersPerLat);
+            double correctedLon = lonFromBounds + (errorX / _metersPerDegree.metersPerLon);
+
+            return (correctedLat, correctedLon);
+        }
+
+        private void UpdateLiveCoordinates()
+        {
+            if (txtCoords == null)
+                return;
+
+            var (lat, lon) = LocalToLatLon(_physics.Position.X, _physics.Position.Y);
+            var (projectedX, projectedY) = LatLonToLocal(lat, lon);
+            double errorX = _physics.Position.X - projectedX;
+            double errorY = _physics.Position.Y - projectedY;
+            double errorMeters = Math.Sqrt(errorX * errorX + errorY * errorY);
+
+            string prefix = _language == "TR" ? "Konum: " : "Loc: ";
+            string zoomLabel = _language == "TR" ? "Yakınlaştırma" : "Zoom";
+            string dimensionLabel = _language == "TR" ? "Alan" : "Area";
+            string errorLabel = _language == "TR" ? "Hata" : "Error";
+
+            txtCoords.Text = string.Format(CultureInfo.InvariantCulture,
+                "{0}{1:F6}, {2:F6} | Alt: {3:F1}m | {4}: {5:F0}m | {6}: {7} | {8}: {9:F1}m",
+                prefix,
+                lat,
+                lon,
+                _physics.Position.Z,
+                dimensionLabel,
+                _mapSideMeters,
+                zoomLabel,
+                _mapZoomLevel,
+                errorLabel,
+                errorMeters);
+        }
+
+        private double CalculateEffectiveCoverage(double requestedCoverage)
+        {
+            double scaleFactor = GetScaleFactor();
+            if (_useGoogleMaps)
+            {
+                double baseResolution = (2 * Math.PI * EarthRadiusMeters) / 256.0;
+                double metersPerPixel = baseResolution * Math.Cos(_centerLat * Math.PI / 180.0) / Math.Pow(2, _mapZoomLevel);
+                return metersPerPixel * MapImagePixels * scaleFactor;
+            }
+
+            return requestedCoverage;
+        }
+
+        private double GetScaleFactor()
+        {
+            if (_useGoogleMaps)
+                return Math.Min(2, Math.Max(1, _mapScale));
+
+            return Math.Max(1, _mapScale);
         }
 
         private void UpdateDroneShadow()

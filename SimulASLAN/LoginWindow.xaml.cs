@@ -19,6 +19,9 @@ namespace WpfApp1
 
     public partial class LoginWindow : Window
     {
+        private const double EarthRadiusMeters = 6378137.0;
+        private const double MapImagePixels = 1600.0;
+        private const double TileSizePixels = 256.0;
         private AppLanguage _currentLanguage = AppLanguage.Turkish;
         private bool _skipIntro;
         private CancellationTokenSource _cursorCts;
@@ -196,22 +199,31 @@ namespace WpfApp1
 
             int quality = (int)sliderQuality.Value;
             double coverage = sliderCoverage.Value;
+            bool useGoogleMaps = chkUseGoogleMaps.IsChecked == true;
+            double scaleFactor = NormalizeScaleFactor(quality, useGoogleMaps);
+            int zoomLevel = useGoogleMaps
+                ? (int)sliderZoom.Value
+                : EstimateZoomFromCoverage(lat, coverage, scaleFactor);
+
+            if (useGoogleMaps)
+            {
+                coverage = ComputeCoverageFromZoom(lat, zoomLevel, scaleFactor);
+            }
 
             // NEW — Avoid launching both systems
-            if (chkUseGoogleMaps.IsChecked == true)
+            if (useGoogleMaps)
             {
-                int zoom = (int)sliderZoom.Value;
-                OpenGoogleMaps(lat, lon, zoom);
+                OpenGoogleMaps(lat, lon, zoomLevel);
 
                 // Start simulation with a different variable name to avoid conflict
-                MainWindow gmWindow = new(lat, lon, quality, GetLanguageCode(_currentLanguage), coverage);
+                MainWindow gmWindow = new(lat, lon, quality, GetLanguageCode(_currentLanguage), coverage, true, zoomLevel);
                 gmWindow.Show();
                 Close();
                 return;
             }
 
             // ORIGINAL BEHAVIOR (legacy map downloader)
-            MainWindow main = new(lat, lon, quality, GetLanguageCode(_currentLanguage), coverage);
+            MainWindow main = new(lat, lon, quality, GetLanguageCode(_currentLanguage), coverage, false, zoomLevel);
             main.Show();
             Close();
         }
@@ -346,6 +358,29 @@ namespace WpfApp1
         {
             const string glyphs = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*";
             return glyphs[random.Next(glyphs.Length)];
+        }
+
+        private static double ComputeCoverageFromZoom(double latitude, int zoomLevel, double scaleFactor)
+        {
+            double baseResolution = (2 * Math.PI * EarthRadiusMeters) / TileSizePixels;
+            double metersPerPixel = baseResolution * Math.Cos(latitude * Math.PI / 180.0) / Math.Pow(2, zoomLevel);
+            return metersPerPixel * MapImagePixels * scaleFactor;
+        }
+
+        private static int EstimateZoomFromCoverage(double latitude, double coverageMeters, double scaleFactor)
+        {
+            double metersPerPixel = coverageMeters / (MapImagePixels * scaleFactor);
+            double baseResolution = (2 * Math.PI * EarthRadiusMeters) / TileSizePixels;
+            double zoom = Math.Log(baseResolution * Math.Cos(latitude * Math.PI / 180.0) / metersPerPixel, 2);
+            return (int)Math.Max(1, Math.Round(zoom));
+        }
+
+        private static double NormalizeScaleFactor(double rawScale, bool googleMaps)
+        {
+            if (googleMaps)
+                return Math.Min(2, Math.Max(1, rawScale));
+
+            return Math.Max(1, rawScale);
         }
     }
 }
