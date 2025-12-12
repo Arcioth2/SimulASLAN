@@ -425,6 +425,7 @@ namespace WpfApp1
             cam.LookDirection = new Vector3D(-camOffsetX, -camOffsetY, -camOffsetZ);
 
             UpdateDroneShadow();
+            UpdateLiveCoordinates();
 
             if (txtTelemetry != null)
             {
@@ -438,6 +439,36 @@ namespace WpfApp1
             double x = (lon - _centerLon) * _metersPerDegree.metersPerLon;
             double y = (lat - _centerLat) * _metersPerDegree.metersPerLat;
             return (x, y);
+        }
+
+        private (double lat, double lon) LocalToLatLon(double x, double y)
+        {
+            double lat = _centerLat + (y / _metersPerDegree.metersPerLat);
+            double lon = _centerLon + (x / _metersPerDegree.metersPerLon);
+            return (lat, lon);
+        }
+
+        private void UpdateLiveCoordinates()
+        {
+            if (txtCoords == null)
+                return;
+
+            var (lat, lon) = LocalToLatLon(_physics.Position.X, _physics.Position.Y);
+
+            string prefix = _language == "TR" ? "Konum: " : "Loc: ";
+            string zoomLabel = _language == "TR" ? "Yakınlaştırma" : "Zoom";
+            string dimensionLabel = _language == "TR" ? "Alan" : "Area";
+
+            txtCoords.Text = string.Format(CultureInfo.InvariantCulture,
+                "{0}{1:F6}, {2:F6} | Alt: {3:F1}m | {4}: {5:F0}m | {6}: {7}",
+                prefix,
+                lat,
+                lon,
+                _physics.Position.Z,
+                dimensionLabel,
+                _mapSideMeters,
+                zoomLabel,
+                _mapScale);
         }
 
         private void UpdateDroneShadow()
