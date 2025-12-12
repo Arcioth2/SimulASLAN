@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Media;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -19,6 +20,8 @@ namespace WpfApp1
     public partial class LoginWindow : Window
     {
         private AppLanguage _currentLanguage = AppLanguage.Turkish;
+        private bool _skipIntro;
+        private CancellationTokenSource _cursorCts;
 
         public LoginWindow()
         {
@@ -36,12 +39,20 @@ namespace WpfApp1
             chkUseGoogleMaps.Unchecked += (_, __) => UpdateMapModeUI();
         }
 
-        private void OnLoaded(object sender, RoutedEventArgs e)
+        private async void OnLoaded(object sender, RoutedEventArgs e)
         {
             SetLanguage(_currentLanguage);
             ClearErrorMessage();
             UpdateMapModeUI(); // ensure correct UI state at startup
             _ = PlayGreetingWithDelay();
+
+            _cursorCts = new CancellationTokenSource();
+            Task cursorTask = BlinkCursor(_cursorCts.Token);
+
+            await PlayTerminalIntro();
+            EndIntro();
+
+            try { await cursorTask; } catch (TaskCanceledException) { }
         }
 
         private async Task PlayGreetingWithDelay()
@@ -217,6 +228,14 @@ namespace WpfApp1
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
+            if (TerminalIntro.Visibility == Visibility.Visible)
+            {
+                _skipIntro = true;
+                SystemSounds.Asterisk.Play();
+                EndIntro();
+                return;
+            }
+
             if (e.Key == Key.Enter)
                 BtnLogin_Click(sender, e);
         }
@@ -235,5 +254,98 @@ namespace WpfApp1
 
         private static string GetLanguageCode(AppLanguage lang)
             => lang == AppLanguage.Turkish ? "TR" : "EN";
+
+        private async Task PlayTerminalIntro()
+        {
+            string[] lines =
+            {
+                "SimulASLAN terminal link initializing...",
+                $"System Time  {DateTime.Now:dddd, dd MMMM yyyy  HH:mm:ss}",
+                "Routing secure flight-control channels...",
+                "Loading navigation matrices...",
+                "Authorization console ready."
+            };
+
+            Random random = new();
+
+            foreach (string line in lines)
+            {
+                if (_skipIntro)
+                    break;
+
+                string baseText = RemoveCursor(TerminalText.Text);
+                int length = line.Length;
+                char[] buffer = new char[length];
+
+                for (int i = 0; i < length && !_skipIntro; i++)
+                {
+                    for (int j = 0; j < length; j++)
+                        buffer[j] = j <= i ? line[j] : RandomGlyph(random);
+
+                    TerminalText.Text = string.IsNullOrEmpty(baseText)
+                        ? new string(buffer)
+                        : $"{baseText}\n{new string(buffer)}";
+
+                    await Task.Delay(40);
+                }
+
+                if (_skipIntro)
+                    break;
+
+                TerminalText.Text = string.IsNullOrEmpty(baseText)
+                    ? line
+                    : $"{baseText}\n{line}";
+
+                await Task.Delay(500);
+            }
+        }
+
+        private async Task BlinkCursor(CancellationToken token)
+        {
+            const string cursor = "█";
+            bool visible = false;
+
+            while (!token.IsCancellationRequested)
+            {
+                try { await Task.Delay(400, token); }
+                catch (TaskCanceledException) { break; }
+
+                Dispatcher.Invoke(() =>
+                {
+                    string text = RemoveCursor(TerminalText.Text);
+
+                    if (TerminalIntro.Visibility != Visibility.Visible)
+                    {
+                        TerminalText.Text = text;
+                        return;
+                    }
+
+                    TerminalText.Text = visible ? text + cursor : text;
+                    visible = !visible;
+                });
+            }
+
+            Dispatcher.Invoke(() => TerminalText.Text = RemoveCursor(TerminalText.Text));
+        }
+
+        private void EndIntro()
+        {
+            if (TerminalIntro.Visibility != Visibility.Visible && LoginRoot.Visibility == Visibility.Visible)
+                return;
+
+            _cursorCts?.Cancel();
+            TerminalIntro.Visibility = Visibility.Collapsed;
+            LoginRoot.Visibility = Visibility.Visible;
+            TerminalText.Text = RemoveCursor(TerminalText.Text);
+        }
+
+        private static string RemoveCursor(string text)
+            => string.IsNullOrEmpty(text) ? string.Empty : text.TrimEnd('█');
+
+        private static char RandomGlyph(Random random)
+        {
+            const string glyphs = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*";
+            return glyphs[random.Next(glyphs.Length)];
+        }
     }
 }
